@@ -20,22 +20,28 @@ import useAuth from './hooks/useAuth.js';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
+
+  // Auth UI state
   const [authScreen, setAuthScreen] = useState('login'); // 'login' | 'signup' | 'forgot'
 
+  // Map states
   const [center, setCenter] = useState([10.7983, 106.6483]);
   const [origin, setOrigin] = useState([10.7983, 106.6483]);
   const [zoom, setZoom] = useState(13);
 
+  // POI & UI states
   const [pois, setPois] = useState([]);
   const [selectedPoiId, setSelectedPoiId] = useState(null);
   const [hoveredPoiId, setHoveredPoiId] = useState(null);
   const [filters, setFilters] = useState([]);
   const [route, setRoute] = useState(null);
 
+  // Weather state
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState(null);
 
+  // UI state
   const [message, setMessage] = useState('Nhập tên địa điểm để tìm kiếm...');
   const [loading, setLoading] = useState(false);
   const [dark, setDark] = useState(() => {
@@ -51,7 +57,7 @@ export default function App() {
   const fetchAbortRef = useRef(null);
   const debouncedFilters = useDebounce(filters, 400);
 
-  // ---- Init from URL
+  // Initialize from URL
   useEffect(() => {
     const q = readQuery();
     const lat = parseFloat(q.lat);
@@ -67,14 +73,17 @@ export default function App() {
     setHydrated(true);
   }, []);
 
+  // Keep center following origin
   useEffect(() => {
     setCenter(origin);
   }, [origin]);
 
+  // Clear route when origin changes
   useEffect(() => {
     setRoute(null);
   }, [origin]);
 
+  // Write URL when origin/filters/dark/collapsed changes
   useEffect(() => {
     if (!hydrated) return;
     writeQuery({
@@ -86,12 +95,13 @@ export default function App() {
     });
   }, [origin, filters, dark, collapsed, hydrated]);
 
+  // Dark mode toggle
   useEffect(() => {
     document.body.classList.toggle('dark', dark);
     localStorage.setItem('darkMode', dark ? '1' : '0');
   }, [dark]);
 
-  // ---- Fetch POI
+  // Fetch POIs when origin or filters change
   useEffect(() => {
     if (!hydrated || !origin || !user) return;
 
@@ -127,7 +137,7 @@ export default function App() {
     return () => controller.abort();
   }, [origin, debouncedFilters, hydrated, user]);
 
-  // ---- Fetch weather
+  // Fetch weather when origin changes
   useEffect(() => {
     if (!hydrated || !origin || !user) return;
 
@@ -158,7 +168,9 @@ export default function App() {
         }
         setWeather(null);
       } finally {
-        if (!cancelled) setWeatherLoading(false);
+        if (!cancelled) {
+          setWeatherLoading(false);
+        }
       }
     })();
 
@@ -167,7 +179,6 @@ export default function App() {
     };
   }, [origin, hydrated, user]);
 
-  // ---- Handlers
   const onSearch = useCallback(
     async (query) => {
       if (!query) return;
@@ -216,7 +227,8 @@ export default function App() {
     if (routeData) {
       setRoute(routeData);
       setMessage(
-        `🚗 Khoảng cách: ${(routeData.distance / 1000).toFixed(2)} km — Thời gian: ${(routeData.duration / 60).toFixed(1)} phút`
+        `🚗 Khoảng cách: ${(routeData.distance / 1000).toFixed(2)} km — 
+       Thời gian: ${(routeData.duration / 60).toFixed(1)} phút`
       );
     } else {
       setRoute(null);
@@ -244,11 +256,11 @@ export default function App() {
 
   const locateUser = useCallback(() => {
     if (!navigator.geolocation) {
-      setMessage('⚠️ Trình duyệt không hỗ trợ định vị');
+      setMessage("⚠️ Trình duyệt không hỗ trợ định vị");
       return;
     }
 
-    setMessage('⏳ Đang xác định vị trí…');
+    setMessage("⏳ Đang xác định vị trí…");
     setLoading(true);
 
     navigator.geolocation.getCurrentPosition(
@@ -260,11 +272,11 @@ export default function App() {
         setZoom(15);
         setSelectedPoiId(null);
 
-        setMessage('📍 Đã xác định vị trí hiện tại');
+        setMessage("📍 Đã xác định vị trí hiện tại");
         setLoading(false);
       },
       () => {
-        setMessage('❌ Không thể lấy vị trí (bạn có từ chối cấp quyền?)');
+        setMessage("❌ Không thể lấy vị trí (bạn có từ chối cấp quyền?)");
         setLoading(false);
       },
       {
@@ -275,70 +287,45 @@ export default function App() {
     );
   }, []);
 
-  // ---- Styles
-  const panelStyle = {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
-    zIndex: 1000,
-    maxWidth: 'calc(100vw - 360px)',
-    backgroundColor: dark ? 'rgba(17, 17, 17, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(12px)',
-    padding: 16,
-    borderRadius: 16,
-    border: `1px solid ${dark ? 'rgba(42, 42, 42, 0.8)' : 'rgba(229, 231, 235, 0.8)'}`,
-    boxShadow: dark
-      ? '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05)'
-      : '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.02)',
-  };
-
+  // Styles
   const buttonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '8px 14px',
-    borderRadius: 10,
-    border: 'none',
-    background: dark
-      ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)'
-      : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+    padding: '6px 10px',
+    borderRadius: 8,
+    border: `1px solid ${dark ? '#404040' : '#d1d5db'}`,
+    background: dark ? '#1b1b1b' : '#f3f4f6',
     color: dark ? '#e5e7eb' : '#111',
     cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: 500,
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    border: `1px solid ${dark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
   };
 
-  const activeButtonStyle = {
-    ...buttonStyle,
-    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-    color: '#fff',
-    border: 'none',
-    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-  };
+  // ============================================
+  // AUTH FLOW: Show loading or auth screens if not authenticated
+  // ============================================
 
-  const asideStyle = {
-    borderLeft: `1px solid ${dark ? '#333' : '#ddd'}`,
-    background: dark ? '#0f0f0f' : '#fafafa',
-    padding: collapsed ? 0 : 16,
-    overflowY: 'auto',
-    width: collapsed ? 12 : 340,
-    transition: 'all .3s cubic-bezier(0.4, 0, 0.2, 1)',
-    overflow: 'hidden',
-  };
-
-  // ---- Auth screens
-  if (authLoading) return <LoadingScreen dark={dark} />;
+  if (authLoading) {
+    return <LoadingScreen dark={dark} />;
+  }
 
   if (!user) {
+    // Show auth screens
     if (authScreen === 'signup') {
-      return <Signup dark={dark} onSwitchToLogin={() => setAuthScreen('login')} />;
+      return (
+        <Signup
+          dark={dark}
+          onSwitchToLogin={() => setAuthScreen('login')}
+        />
+      );
     }
+
     if (authScreen === 'forgot') {
-      return <ForgotPassword dark={dark} onBackToLogin={() => setAuthScreen('login')} />;
+      return (
+        <ForgotPassword
+          dark={dark}
+          onBackToLogin={() => setAuthScreen('login')}
+        />
+      );
     }
+
+    // Default: login screen
     return (
       <Login
         dark={dark}
@@ -348,125 +335,77 @@ export default function App() {
     );
   }
 
-  // ---- Main app
+  // ============================================
+  // MAIN APP: User is authenticated
+  // ============================================
+
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: collapsed ? '1fr 12px' : '1fr 340px',
+        gridTemplateColumns: collapsed ? '1fr 12px' : '1fr 320px',
         height: '100vh',
-        overflow: 'hidden',
       }}
     >
+      {/* Map Area */}
       <div style={{ position: 'relative', background: dark ? '#0b0b0b' : '#fff' }}>
-        <div style={panelStyle}>
-          {/* ===== KHỐI CONTROL TRÊN CÙNG ===== */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* HÀNG 1: Search + buttons + (email nếu ẨN sidebar) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <SearchBar onSearch={onSearch} dark={dark} />
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            zIndex: 1000,
+            backgroundColor: dark ? '#111' : '#fff',
+            color: dark ? '#e5e7eb' : '#111',
+            padding: '10px',
+            borderRadius: 8,
+            border: `1px solid ${dark ? '#2a2a2a' : '#e5e7eb'}`,
+            boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.4)' : '0 2px 8px rgba(0,0,0,0.15)',
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <SearchBar
+              onSearch={onSearch}
+              dark={dark}
+            />
 
-              <button
-                style={showFilters ? activeButtonStyle : buttonStyle}
-                onClick={() => setShowFilters((v) => !v)}
-              >
-                🎯 Lọc ({filters.length})
-              </button>
+            <button style={buttonStyle} onClick={() => setShowFilters((v) => !v)}>
+              {showFilters ? `Ẩn bộ lọc (${filters.length})` : `Bộ lọc (${filters.length})`}
+            </button>
 
-              <button style={buttonStyle} onClick={resetMap}>
-                ↻ Reset
-              </button>
+            <button style={buttonStyle} onClick={resetMap}>
+              ↩️ Reset
+            </button>
 
-              <button style={buttonStyle} onClick={locateUser}>
-                📍 Vị trí
-              </button>
+            <button style={buttonStyle} onClick={locateUser}>
+              📍 Vị trí của tôi
+            </button>
 
-              <button style={buttonStyle} onClick={copyShareLink}>
-                🔗 Chia sẻ
-              </button>
+            <button style={buttonStyle} onClick={copyShareLink}>
+              🔗 Copy link
+            </button>
 
-              <button style={buttonStyle} onClick={() => setShowTranslator((v) => !v)}>
-                🌐 Dịch
-              </button>
+            <button style={buttonStyle} onClick={() => setShowTranslator(v => !v)}>
+              🌐 Dịch nhanh
+            </button>
 
-              <button
-                style={dark ? activeButtonStyle : buttonStyle}
-                onClick={() => setDark((v) => !v)}
-              >
-                {dark ? '☀️' : '🌙'}
-              </button>
+            <button style={buttonStyle} onClick={() => setDark((v) => !v)}>
+              {dark ? '☀️ Light' : '🌙 Dark'}
+            </button>
 
-              {/* Nút ẩn/hiện sidebar */}
-              <button style={buttonStyle} onClick={() => setCollapsed((v) => !v)}>
-                {collapsed ? '▶' : '◀'}
-              </button>
+            <button style={buttonStyle} onClick={() => setCollapsed((v) => !v)}>
+              {collapsed ? '» Mở' : '« Thu gọn'}
+            </button>
 
-              {/* Khi sidebar ẨN → email ở HÀNG 1, bên phải nút ▶ */}
-              {collapsed && <UserProfile dark={dark} />}
-            </div>
-
-            {/* Khi sidebar HIỆN → email nhảy xuống HÀNG 2, dưới ô Search */}
-            {!collapsed && (
-              <div>
-                <UserProfile dark={dark} />
-              </div>
-            )}
+            {/* User Profile Component */}
+            <UserProfile dark={dark} />
           </div>
 
-          {/* ===== Filter panel ===== */}
-          {showFilters && (
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                background: dark ? 'rgba(30, 30, 30, 0.6)' : 'rgba(249, 250, 251, 0.8)',
-                border: `1px solid ${dark ? 'rgba(64, 64, 64, 0.5)' : 'rgba(229, 231, 235, 0.5)'
-                  }`,
-              }}
-            >
-              <FilterBar selectedTypes={filters} onChange={setFilters} />
-            </div>
-          )}
+          {showFilters && <FilterBar selectedTypes={filters} onChange={setFilters} />}
 
-          {/* ===== Status message ===== */}
-          <div
-            style={{
-              fontSize: 13,
-              marginTop: 10,
-              padding: '8px 12px',
-              borderRadius: 8,
-              background: dark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
-              color: dark ? '#ffffff' : '#1e40af',
-              border: `1px solid ${dark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)'
-                }`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            {loading && (
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: 12,
-                  height: 12,
-                  border: `2px solid ${dark ? '#3b82f6' : '#2563eb'}`,
-                  borderTopColor: 'transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                }}
-              />
-            )}
-            <span>{loading ? 'Đang tải...' : message}</span>
+          <div style={{ fontSize: 12, marginTop: 6 }}>
+            {loading ? '⏳ Đang tải…' : message}
           </div>
-
-          <style>
-            {`
-              @keyframes spin {
-                to { transform: rotate(360deg); }
-              }
-            `}
-          </style>
 
           <TranslatorPopup
             open={showTranslator}
@@ -488,10 +427,21 @@ export default function App() {
         />
       </div>
 
-      {/* Sidebar: Điểm quan tâm gần đây */}
-      <div style={asideStyle}>
+      {/* Sidebar */}
+      <div
+        style={{
+          borderLeft: `1px solid ${dark ? '#333' : '#ddd'}`,
+          background: dark ? '#1e1e1e' : '#fff',
+          color: dark ? '#f1f1f1' : '#111',
+          padding: collapsed ? 0 : 10,
+          overflowY: 'auto',
+          width: collapsed ? 12 : 320,
+          transition: 'all .3s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+        }}
+      >
         {!collapsed && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <>
             <WeatherCard
               weather={weather}
               loading={weatherLoading}
@@ -499,41 +449,16 @@ export default function App() {
               dark={dark}
             />
 
-            <div
-              style={{
-                padding: 16,
-                borderRadius: 16,
-                background: dark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                border: `1px solid ${dark ? 'rgba(64, 64, 64, 0.5)' : 'rgba(229, 231, 235, 0.5)'
-                  }`,
-                boxShadow: dark
-                  ? '0 4px 16px rgba(0, 0, 0, 0.3)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              }}
-            >
-              <h3
-                style={{
-                  margin: '0 0 16px 0',
-                  fontSize: 18,
-                  fontWeight: 600,
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                📌 Điểm quan tâm gần đây
-              </h3>
+            <h3>📌 Điểm quan tâm gần đây</h3>
 
-              <POIList
-                pois={pois}
-                selectedPoiId={selectedPoiId}
-                onClickItem={onSelectPoi}
-                onHoverItem={(id) => setHoveredPoiId(id)}
-                dark={dark}
-              />
-            </div>
-          </div>
+            <POIList
+              pois={pois}
+              selectedPoiId={selectedPoiId}
+              onClickItem={onSelectPoi}
+              onHoverItem={(id) => setHoveredPoiId(id)}
+              dark={dark}
+            />
+          </>
         )}
       </div>
     </div>

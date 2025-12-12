@@ -1,19 +1,7 @@
 import React from 'react'
 
 export default function POIList({ pois = [], onClickItem, onHoverItem, selectedPoiId, dark }) {
-    if (!pois.length) {
-        return (
-            <div
-                style={{
-                    color: dark ? '#ffffff' : '#111111',
-                    fontSize: 13,
-                    padding: '4px 2px',
-                }}
-            >
-                Chưa có dữ liệu POI.
-            </div>
-        );
-    }
+    if (!pois.length) return <div>Chưa có dữ liệu POI.</div>
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -30,9 +18,9 @@ export default function POIList({ pois = [], onClickItem, onHoverItem, selectedP
                             borderRadius: 8,
                             padding: 8,
                             background: selected
-                                ? (dark ? '#2a3345' : '#eaf2ff')
-                                : (dark ? '#1e1e1e' : '#fff'),
-                            color: dark ? '#f1f1f1' : '#111',
+                                ? (dark ? '#2a3345' : '#eaf2ff')    // màu khi chọn
+                                : (dark ? '#1e1e1e' : '#fff'),      // nền bình thường
+                            color: dark ? '#f1f1f1' : '#111',       // màu chữ
                             cursor: 'pointer'
                         }}
                     >
