@@ -17,6 +17,8 @@ import { searchLocation } from './api/nominatim.js';
 import { getRoute } from './api/osrm.js';
 import { getCurrentWeather } from './api/weather.js';
 import useAuth from './hooks/useAuth.js';
+import AIChatbot from './components/AIChatbot.jsx';
+import SmartRecommendations from './components/SmartRecommendations.jsx';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -53,6 +55,10 @@ export default function App() {
   const [showFilters, setShowFilters] = useState(true);
   const [showTranslator, setShowTranslator] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+
+  // AI features state
+  const [showChatbot, setShowChatbot] = useState(true);
+  const [showRecommendations, setShowRecommendations] = useState(true);
 
   const fetchAbortRef = useRef(null);
   const debouncedFilters = useDebounce(filters, 400);
@@ -234,6 +240,12 @@ export default function App() {
       setRoute(null);
     }
   };
+
+  // Hàm xử lý khi người dùng chọn 1 gợi ý từ Smart Recommendations
+  const applyRecommendedFilter = useCallback((poiType) => {
+    setFilters([poiType]);
+    setMessage(`🎯 Đang tìm ${poiType} gần bạn...`);
+  }, []);
 
   const resetMap = useCallback(() => {
     setCenter(origin);
@@ -461,6 +473,19 @@ export default function App() {
           </>
         )}
       </div>
+
+      {/* AI Features - Only show when authenticated */}
+      {showChatbot && <AIChatbot dark={dark} origin={origin} />}
+
+      {showRecommendations && (
+        <SmartRecommendations
+          dark={dark}
+          origin={origin}
+          pois={pois}
+          onSelectType={applyRecommendedFilter}
+        />
+      )}
+
     </div>
   );
 }

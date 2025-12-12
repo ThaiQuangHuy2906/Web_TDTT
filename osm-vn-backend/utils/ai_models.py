@@ -1,4 +1,4 @@
-from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from typing import List, Optional, Tuple
 import re
@@ -14,18 +14,24 @@ class AIModels:
         print(f"🔧 Initializing AI models on {self.device}...")
         
         # Use lightweight Vietnamese-friendly model
-        # Alternative: "VietAI/vit5-base" for better Vietnamese support
-        self.model_name = "google/flan-t5-small"  # 80MB, fast inference
+        self.model_name = "google/flan-t5-small"  # T5 is Seq2Seq, NOT CausalLM
         
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
+
+            # IMPORTANT: Flan-T5 → AutoModelForSeq2SeqLM
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(
                 self.model_name,
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32
+                dtype=torch.float16 if self.device == "cuda" else torch.float32
             ).to(self.device)
-            
+
+            # Ensure pad_token exists
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+
             print(f"✅ Model loaded: {self.model_name}")
             self.loaded = True
+
         except Exception as e:
             print(f"❌ Model loading failed: {e}")
             self.loaded = False
@@ -33,19 +39,19 @@ class AIModels:
     def is_loaded(self) -> bool:
         return self.loaded
     
+
+    # ===================== CHATBOT =====================
+
     def generate_chat_response(
         self, 
         message: str, 
         history: List[dict] = None,
         location: dict = None
     ) -> str:
-        """
-        Generate chatbot response for travel queries
-        """
+
         if not self.loaded:
             return "Xin lỗi, AI chatbot chưa sẵn sàng."
         
-        # Build context-aware prompt
         context = self._build_context(history, location)
         
         prompt = f"""You are a helpful travel assistant for Vietnam.
@@ -68,15 +74,11 @@ Assistant:"""
                     temperature=0.7,
                     top_p=0.9,
                     do_sample=True,
-                    pad_token_id=self.tokenizer.eos_token_id
                 )
             
             response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Clean up response
             response = response.replace(prompt, "").strip()
             
-            # Fallback if model gives empty response
             if not response or len(response) < 10:
                 response = self._generate_fallback_response(message, location)
             
@@ -85,16 +87,17 @@ Assistant:"""
         except Exception as e:
             print(f"❌ Chat generation error: {e}")
             return self._generate_fallback_response(message, location)
-    
+
+
+    # ===================== POI DESCRIPTION =====================
+
     def generate_poi_description(
         self,
         poi_name: str,
         poi_type: str,
         location: Optional[str] = None
     ) -> Tuple[str, List[str]]:
-        """
-        Generate description and highlights for a POI
-        """
+
         if not self.loaded:
             return self._generate_fallback_description(poi_name, poi_type)
         
@@ -120,7 +123,6 @@ Description (2-3 sentences):"""
             description = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             description = description.replace(prompt, "").strip()
             
-            # Extract highlights (simple keyword extraction)
             highlights = self._extract_highlights(poi_type, description)
             
             if not description or len(description) < 20:
@@ -131,67 +133,64 @@ Description (2-3 sentences):"""
         except Exception as e:
             print(f"❌ Description generation error: {e}")
             return self._generate_fallback_description(poi_name, poi_type)
-    
+
+
+    # ===================== SUGGESTIONS EXTRACTION =====================
+
     def extract_suggestions(self, text: str) -> List[str]:
-        """
-        Extract actionable suggestions from AI response
-        """
         suggestions = []
         
-        # Look for bullet points or numbered lists
         patterns = [
-            r'\d+\.\s*(.+)',  # Numbered lists
-            r'[-•]\s*(.+)',   # Bullet points
-            r'Try\s+(.+)',    # "Try X"
-            r'Visit\s+(.+)',  # "Visit X"
+            r'\d+\.\s*(.+)',
+            r'[-•]\s*(.+)',
+            r'Try\s+(.+)',
+            r'Visit\s+(.+)',
         ]
         
         for pattern in patterns:
             matches = re.findall(pattern, text, re.MULTILINE)
             suggestions.extend([m.strip() for m in matches])
         
-        # Return top 3 unique suggestions
         return list(dict.fromkeys(suggestions))[:3]
     
-    # ============================================
-    # HELPER METHODS
-    # ============================================
-    
+
+    # ===================== HELPERS =====================
+
     def _build_context(self, history: List[dict], location: dict) -> str:
         if not history:
             return "No previous conversation."
         
         context = ""
-        for msg in history[-3:]:  # Last 3 messages
+        for msg in history[-3:]:
             role = msg.get("role", "user")
             content = msg.get("content", "")
             context += f"{role.capitalize()}: {content}\n"
         
         return context
     
+
     def _generate_fallback_response(self, message: str, location: dict) -> str:
-        """Simple rule-based fallback when AI fails"""
         message_lower = message.lower()
         
         if any(word in message_lower for word in ["eat", "food", "restaurant", "ăn"]):
-            return f"Tôi gợi ý bạn tìm các nhà hàng gần {location.get('name', 'vị trí hiện tại')}. Hãy thử bộ lọc 'Nhà hàng' hoặc 'Cà phê' trên bản đồ!"
+            return f"Tôi gợi ý bạn tìm các nhà hàng gần {location.get('name', 'vị trí hiện tại')}. Hãy thử bộ lọc 'Nhà hàng' hoặc 'Cà phê'!"
         
         elif any(word in message_lower for word in ["visit", "go", "see", "tham quan"]):
-            return "Bạn có thể khám phá các điểm tham quan, công viên, hoặc bảo tàng gần đây. Sử dụng bộ lọc 'Giải trí & Thể thao' để xem thêm!"
+            return "Bạn có thể khám phá công viên, bảo tàng hoặc địa điểm nổi bật gần đây!"
         
         elif any(word in message_lower for word in ["hotel", "stay", "sleep", "khách sạn"]):
-            return "Để tìm nơi nghỉ ngơi, hãy tìm kiếm 'khách sạn' hoặc 'nhà nghỉ' trên thanh tìm kiếm!"
+            return "Hãy thử tìm kiếm 'khách sạn' hoặc 'nhà nghỉ' trong thanh tìm kiếm!"
         
         else:
-            return f"Xin chào! Tôi có thể giúp bạn tìm địa điểm ở {location.get('name', 'Việt Nam')}. Hãy hỏi tôi về ăn uống, tham quan, hoặc nơi nghỉ ngơi!"
-    
+            return f"Xin chào! Tôi có thể giúp bạn tìm địa điểm ở {location.get('name', 'Việt Nam')}."
+
+
     def _generate_fallback_description(self, poi_name: str, poi_type: str) -> Tuple[str, List[str]]:
-        """Simple description when AI fails"""
         type_map = {
             "restaurant": ("Nhà hàng phục vụ ẩm thực đa dạng", ["Ẩm thực", "Không gian thoải mái"]),
-            "cafe": ("Quán cà phê lý tưởng để thư giãn", ["Đồ uống", "Wi-Fi", "Không gian yên tĩnh"]),
-            "park": ("Công viên xanh mát phù hợp dạo chơi", ["Thiên nhiên", "Thư giãn", "Tập thể dục"]),
-            "museum": ("Bảo tàng lưu giữ di sản văn hóa", ["Lịch sử", "Văn hóa", "Giáo dục"]),
+            "cafe": ("Quán cà phê lý tưởng để thư giãn", ["Đồ uống", "Không gian yên tĩnh"]),
+            "park": ("Công viên xanh mát phù hợp dạo chơi", ["Thiên nhiên", "Thư giãn"]),
+            "museum": ("Bảo tàng lưu giữ di sản văn hóa", ["Lịch sử", "Giáo dục"]),
         }
         
         desc, highlights = type_map.get(poi_type, (
@@ -201,8 +200,8 @@ Description (2-3 sentences):"""
         
         return desc, highlights
     
+
     def _extract_highlights(self, poi_type: str, description: str) -> List[str]:
-        """Extract key highlights from description"""
         keywords = {
             "restaurant": ["delicious", "authentic", "famous", "traditional"],
             "cafe": ["cozy", "modern", "relaxing", "popular"],

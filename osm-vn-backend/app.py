@@ -148,7 +148,10 @@ async def describe_poi_endpoint(request: POIDescriptionRequest):
 def start_ngrok():
     """Start ngrok tunnel"""
     from pyngrok import ngrok
-    
+
+    print("🔄 Đang reset ngrok...")
+    ngrok.kill() # Giết chết mọi tiến trình ngrok cũ trước khi chạy cái mới
+
     auth_token = os.getenv("NGROK_AUTH_TOKEN")
     if not auth_token:
         print("⚠️  NGROK_AUTH_TOKEN not set. API will only be accessible locally.")
