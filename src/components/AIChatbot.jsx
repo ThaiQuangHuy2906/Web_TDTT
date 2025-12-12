@@ -1,12 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { chatWithAI } from '../api/backend';
+import { chatWithAI, checkBackendHealth } from '../api/backend';
 
 export default function AIChatbot({ dark = false, origin = null }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('unknown'); // 'healthy' | 'offline' | 'unknown'
   const messagesEndRef = useRef(null);
+
+  // Check backend health when opening
+  useEffect(() => {
+    if (open && backendStatus === 'unknown') {
+      checkBackendHealth().then(isHealthy => {
+        setBackendStatus(isHealthy ? 'healthy' : 'offline');
+      });
+    }
+  }, [open]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -36,12 +46,18 @@ export default function AIChatbot({ dark = false, origin = null }) {
         name: 'Current location'
       } : null;
 
-      // Call AI API
+      // Call AI API (with fallback built-in)
       const response = await chatWithAI(
         userMessage,
-        newMessages.slice(-4), // Last 4 messages for context
+        newMessages.slice(-4),
         location
       );
+
+      // Check if this was a fallback response
+      const isFallback = !response.suggestions || response.suggestions.length === 0;
+      if (isFallback && backendStatus !== 'offline') {
+        setBackendStatus('offline');
+      }
 
       // Add AI response
       setMessages([
@@ -50,10 +66,15 @@ export default function AIChatbot({ dark = false, origin = null }) {
       ]);
 
     } catch (error) {
-      console.error('Chat error:', error);
+      console.error('❌ Chat error:', error);
+      setBackendStatus('offline');
+      
       setMessages([
         ...newMessages,
-        { role: 'assistant', content: '⚠️ Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.' }
+        { 
+          role: 'assistant', 
+          content: '⚠️ Xin lỗi, có lỗi xảy ra. Vui lòng thử lại hoặc dùng tính năng tìm kiếm thay!' 
+        }
       ]);
     } finally {
       setLoading(false);
@@ -128,8 +149,24 @@ export default function AIChatbot({ dark = false, origin = null }) {
         }}
       >
         <div>
-          <div style={{ fontWeight: 600 }}>🤖 Trợ lý AI</div>
-          <div style={{ fontSize: 12, opacity: 0.9 }}>Tư vấn du lịch Việt Nam</div>
+          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            🤖 Trợ lý AI
+            {backendStatus === 'offline' && (
+              <span style={{ 
+                fontSize: 10, 
+                background: 'rgba(239, 68, 68, 0.8)', 
+                padding: '2px 6px', 
+                borderRadius: 4 
+              }}>
+                Offline
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.9 }}>
+            {backendStatus === 'offline' 
+              ? 'Chế độ fallback (không cần server)' 
+              : 'Tư vấn du lịch Việt Nam'}
+          </div>
         </div>
         <button
           onClick={() => setOpen(false)}
@@ -159,7 +196,15 @@ export default function AIChatbot({ dark = false, origin = null }) {
       >
         {messages.length === 0 && (
           <div style={{ textAlign: 'center', padding: 20, opacity: 0.6 }}>
-            👋 Xin chào! Tôi có thể giúp bạn tìm địa điểm ở Việt Nam.
+            <div style={{ fontSize: 24, marginBottom: 8 }}>👋</div>
+            <div>
+              {backendStatus === 'offline' 
+                ? 'Xin chào! AI đang offline nhưng tôi vẫn có thể giúp bạn tìm địa điểm!' 
+                : 'Xin chào! Tôi có thể giúp bạn tìm địa điểm ở Việt Nam.'}
+            </div>
+            <div style={{ fontSize: 12, marginTop: 8, opacity: 0.7 }}>
+              Hãy thử hỏi: "Tìm quán cà phê gần đây"
+            </div>
           </div>
         )}
 
@@ -223,7 +268,9 @@ export default function AIChatbot({ dark = false, origin = null }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Hỏi tôi về địa điểm..."
+          placeholder={backendStatus === 'offline' 
+            ? 'Hỏi tôi (chế độ offline)...' 
+            : 'Hỏi tôi về địa điểm...'}
           disabled={loading}
           style={{
             flex: 1,
