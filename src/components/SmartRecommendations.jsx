@@ -27,12 +27,7 @@ export default function SmartRecommendations({
   const loadRecommendations = async () => {
     if (!origin) {
       setRecommendations([]);
-      return;
-    }
-
-    const userHistory = getUserHistory();
-    if (userHistory.length === 0) {
-      setRecommendations([]);
+      setError(false);
       return;
     }
 
@@ -40,6 +35,8 @@ export default function SmartRecommendations({
     setError(false);
 
     try {
+      const userHistory = getUserHistory();
+      
       const currentLocation = {
         lat: origin[0],
         lon: origin[1],
@@ -54,6 +51,11 @@ export default function SmartRecommendations({
 
       setRecommendations(results || []);
       
+      // Show expanded view after loading if we have results
+      if (results && results.length > 0) {
+        setExpanded(true);
+      }
+      
     } catch (err) {
       console.error('❌ Recommendations error:', err);
       setError(true);
@@ -65,8 +67,8 @@ export default function SmartRecommendations({
 
   // Load on mount and when POIs change (but debounced)
   useEffect(() => {
-    // Only load if we have some POI history
-    if (pois.length >= 2 && origin) {
+    // Load if we have some POI history OR just to get default recommendations
+    if (origin) {
       const timer = setTimeout(() => {
         loadRecommendations();
       }, 1000); // Debounce 1 second
@@ -78,7 +80,7 @@ export default function SmartRecommendations({
   }, [pois.length, origin]);
 
   // Don't show if no recommendations and not loading
-  if (!loading && recommendations.length === 0 && !error) {
+  if (!loading && recommendations.length === 0 && !error && !expanded) {
     return null;
   }
 
@@ -88,7 +90,7 @@ export default function SmartRecommendations({
       <div
         style={{
           position: 'absolute',
-          top: 80,
+          top: 160,
           left: 10,
           zIndex: 999,
           background: dark ? '#1e1e1e' : '#fff',
@@ -111,7 +113,7 @@ export default function SmartRecommendations({
             {loading 
               ? 'Đang phân tích...' 
               : error
-              ? 'Thử lại'
+              ? 'Xem gợi ý'
               : `${recommendations.length} gợi ý cho bạn`}
           </span>
         </div>
@@ -124,7 +126,7 @@ export default function SmartRecommendations({
     <div
       style={{
         position: 'absolute',
-        top: 80,
+        top: 160,
         left: 10,
         zIndex: 999,
         width: 320,
@@ -162,7 +164,7 @@ export default function SmartRecommendations({
               opacity: 0.7,
               color: dark ? '#9ca3af' : '#6b7280',
             }}>
-              {error ? 'Chế độ offline' : 'Dựa trên sở thích của bạn'}
+              {error ? 'Chế độ offline' : pois.length > 0 ? 'Dựa trên sở thích của bạn' : 'Gợi ý phổ biến'}
             </div>
           </div>
         </div>
@@ -174,6 +176,7 @@ export default function SmartRecommendations({
             color: dark ? '#9ca3af' : '#6b7280',
             cursor: 'pointer',
             fontSize: 18,
+            padding: 4,
           }}
         >
           ×
@@ -274,7 +277,7 @@ export default function SmartRecommendations({
             textAlign: 'center',
             color: dark ? '#9ca3af' : '#6b7280',
           }}>
-            Tìm kiếm thêm để nhận gợi ý!
+            Tìm kiếm để nhận gợi ý!
           </div>
         )}
       </div>
@@ -289,19 +292,23 @@ export default function SmartRecommendations({
         }}
       >
         <button
-          onClick={loadRecommendations}
-          disabled={loading || pois.length < 2}
+          onClick={(e) => {
+            e.stopPropagation();
+            loadRecommendations();
+          }}
+          disabled={loading || !origin}
           style={{
             padding: '6px 12px',
             borderRadius: 6,
             border: 'none',
-            background: loading || pois.length < 2
+            background: loading || !origin
               ? (dark ? '#404040' : '#d1d5db')
               : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
             color: '#fff',
             fontSize: 12,
             fontWeight: 600,
-            cursor: loading || pois.length < 2 ? 'not-allowed' : 'pointer',
+            cursor: loading || !origin ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
           }}
         >
           {loading ? '⏳ Đang tải...' : '🔄 Làm mới gợi ý'}

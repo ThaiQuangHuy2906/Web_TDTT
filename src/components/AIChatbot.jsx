@@ -14,6 +14,10 @@ export default function AIChatbot({ dark = false, origin = null }) {
     if (open && backendStatus === 'unknown') {
       checkBackendHealth().then(isHealthy => {
         setBackendStatus(isHealthy ? 'healthy' : 'offline');
+        console.log('🔌 Backend status:', isHealthy ? 'Online' : 'Offline');
+      }).catch(() => {
+        setBackendStatus('offline');
+        console.log('🔌 Backend status: Offline (check failed)');
       });
     }
   }, [open]);
@@ -43,20 +47,25 @@ export default function AIChatbot({ dark = false, origin = null }) {
       const location = origin ? {
         lat: origin[0],
         lon: origin[1],
-        name: 'Current location'
+        name: 'Vị trí hiện tại'
       } : null;
+
+      console.log('📤 Sending to AI:', { userMessage, location, backendStatus });
 
       // Call AI API (with fallback built-in)
       const response = await chatWithAI(
         userMessage,
-        newMessages.slice(-4),
+        newMessages.slice(-4), // Last 4 messages for context
         location
       );
+
+      console.log('📥 AI Response:', response);
 
       // Check if this was a fallback response
       const isFallback = !response.suggestions || response.suggestions.length === 0;
       if (isFallback && backendStatus !== 'offline') {
         setBackendStatus('offline');
+        console.log('⚠️ Switched to offline mode (fallback response detected)');
       }
 
       // Add AI response
@@ -73,7 +82,7 @@ export default function AIChatbot({ dark = false, origin = null }) {
         ...newMessages,
         { 
           role: 'assistant', 
-          content: '⚠️ Xin lỗi, có lỗi xảy ra. Vui lòng thử lại hoặc dùng tính năng tìm kiếm thay!' 
+          content: '⚠️ Xin lỗi, có lỗi xảy ra. Hãy thử lại hoặc dùng tính năng tìm kiếm!' 
         }
       ]);
     } finally {
@@ -88,6 +97,11 @@ export default function AIChatbot({ dark = false, origin = null }) {
     }
   };
 
+  const startConversation = (exampleQuery) => {
+    setInput(exampleQuery);
+    setTimeout(() => handleSend(), 100);
+  };
+
   if (!open) {
     // Floating button
     return (
@@ -95,7 +109,7 @@ export default function AIChatbot({ dark = false, origin = null }) {
         onClick={() => setOpen(true)}
         style={{
           position: 'fixed',
-          bottom: 100,
+          bottom: 20,
           right: 20,
           zIndex: 9999,
           width: 56,
@@ -123,7 +137,7 @@ export default function AIChatbot({ dark = false, origin = null }) {
     <div
       style={{
         position: 'fixed',
-        bottom: 100,
+        bottom: 20,
         right: 20,
         zIndex: 9999,
         width: 360,
@@ -161,10 +175,20 @@ export default function AIChatbot({ dark = false, origin = null }) {
                 Offline
               </span>
             )}
+            {backendStatus === 'healthy' && (
+              <span style={{ 
+                fontSize: 10, 
+                background: 'rgba(34, 197, 94, 0.8)', 
+                padding: '2px 6px', 
+                borderRadius: 4 
+              }}>
+                Online
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 12, opacity: 0.9 }}>
             {backendStatus === 'offline' 
-              ? 'Chế độ fallback (không cần server)' 
+              ? 'Chế độ cơ bản (không cần server)' 
               : 'Tư vấn du lịch Việt Nam'}
           </div>
         </div>
@@ -177,6 +201,7 @@ export default function AIChatbot({ dark = false, origin = null }) {
             color: '#fff',
             cursor: 'pointer',
             padding: '4px 8px',
+            fontSize: 16,
           }}
         >
           ✕
@@ -195,15 +220,62 @@ export default function AIChatbot({ dark = false, origin = null }) {
         }}
       >
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 20, opacity: 0.6 }}>
+          <div style={{ textAlign: 'center', padding: 20 }}>
             <div style={{ fontSize: 24, marginBottom: 8 }}>👋</div>
-            <div>
+            <div style={{ 
+              color: dark ? '#e5e7eb' : '#111',
+              marginBottom: 12 
+            }}>
               {backendStatus === 'offline' 
-                ? 'Xin chào! AI đang offline nhưng tôi vẫn có thể giúp bạn tìm địa điểm!' 
-                : 'Xin chào! Tôi có thể giúp bạn tìm địa điểm ở Việt Nam.'}
+                ? 'Xin chào! Tôi có thể giúp bạn tìm địa điểm (chế độ cơ bản)' 
+                : 'Xin chào! Tôi có thể giúp bạn tìm địa điểm ở Việt Nam'}
             </div>
-            <div style={{ fontSize: 12, marginTop: 8, opacity: 0.7 }}>
-              Hãy thử hỏi: "Tìm quán cà phê gần đây"
+            
+            {/* Example questions */}
+            <div style={{ 
+              fontSize: 13, 
+              opacity: 0.8,
+              marginTop: 12,
+              color: dark ? '#9ca3af' : '#6b7280',
+            }}>
+              Thử hỏi:
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 6,
+              marginTop: 8 
+            }}>
+              {[
+                'Tìm quán cà phê gần đây',
+                'Nhà hàng nào ngon?',
+                'Địa điểm tham quan ở đâu?'
+              ].map((q, i) => (
+                <button
+                  key={i}
+                  onClick={() => startConversation(q)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: `1px solid ${dark ? '#404040' : '#e5e7eb'}`,
+                    background: dark ? '#2a2a2a' : '#f9fafb',
+                    color: dark ? '#e5e7eb' : '#111',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = dark ? '#333' : '#f3f4f6';
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = dark ? '#2a2a2a' : '#f9fafb';
+                    e.currentTarget.style.borderColor = dark ? '#404040' : '#e5e7eb';
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -221,12 +293,13 @@ export default function AIChatbot({ dark = false, origin = null }) {
                 padding: '8px 12px',
                 borderRadius: 8,
                 background: msg.role === 'user'
-                  ? (dark ? '#3b82f6' : '#3b82f6')
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
                   : (dark ? '#2a2a2a' : '#f3f4f6'),
                 color: msg.role === 'user' ? '#fff' : (dark ? '#e5e7eb' : '#111'),
                 fontSize: 14,
                 lineHeight: 1.5,
                 whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
               }}
             >
               {msg.content}
@@ -244,10 +317,19 @@ export default function AIChatbot({ dark = false, origin = null }) {
               color: dark ? '#e5e7eb' : '#111',
             }}
           >
-            <div style={{ display: 'flex', gap: 4 }}>
-              <span className="dot" style={{ animation: 'blink 1.4s infinite both' }}>●</span>
-              <span className="dot" style={{ animation: 'blink 1.4s infinite both 0.2s' }}>●</span>
-              <span className="dot" style={{ animation: 'blink 1.4s infinite both 0.4s' }}>●</span>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ 
+                animation: 'blink 1.4s infinite both',
+                fontSize: 12 
+              }}>●</span>
+              <span style={{ 
+                animation: 'blink 1.4s infinite both 0.2s',
+                fontSize: 12 
+              }}>●</span>
+              <span style={{ 
+                animation: 'blink 1.4s infinite both 0.4s',
+                fontSize: 12 
+              }}>●</span>
             </div>
           </div>
         )}
@@ -269,7 +351,7 @@ export default function AIChatbot({ dark = false, origin = null }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={backendStatus === 'offline' 
-            ? 'Hỏi tôi (chế độ offline)...' 
+            ? 'Hỏi tôi (chế độ cơ bản)...' 
             : 'Hỏi tôi về địa điểm...'}
           disabled={loading}
           style={{
@@ -280,6 +362,7 @@ export default function AIChatbot({ dark = false, origin = null }) {
             background: dark ? '#0f172a' : '#fff',
             color: dark ? '#e5e7eb' : '#111',
             outline: 'none',
+            fontSize: 14,
           }}
         />
         <button
@@ -295,6 +378,8 @@ export default function AIChatbot({ dark = false, origin = null }) {
             color: '#fff',
             cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
             fontWeight: 600,
+            fontSize: 16,
+            transition: 'all 0.2s',
           }}
         >
           {loading ? '⏳' : '📤'}
