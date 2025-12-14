@@ -11,7 +11,7 @@ class AIModels:
     
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"🔧 Initializing AI models on {self.device}...")
+        print(f"[AI] Initializing AI models on {self.device}...")
         
         # Use lightweight Vietnamese-friendly model
         self.model_name = "google/flan-t5-small"  # T5 is Seq2Seq, NOT CausalLM
@@ -29,11 +29,12 @@ class AIModels:
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
 
-            print(f"✅ Model loaded: {self.model_name}")
+            print(f"[OK] Model loaded: {self.model_name}")
             self.loaded = True
 
         except Exception as e:
-            print(f"❌ Model loading failed: {e}")
+            print(f"[ERROR] Model loading failed: {e}")
+            self.loaded = False
             self.loaded = False
     
     def is_loaded(self) -> bool:
@@ -85,7 +86,7 @@ Assistant:"""
             return response
         
         except Exception as e:
-            print(f"❌ Chat generation error: {e}")
+            print(f"[ERROR] Chat generation error: {e}")
             return self._generate_fallback_response(message, location)
 
 
@@ -131,7 +132,7 @@ Description (2-3 sentences):"""
             return description, highlights
         
         except Exception as e:
-            print(f"❌ Description generation error: {e}")
+            print(f"[ERROR] Description generation error: {e}")
             return self._generate_fallback_description(poi_name, poi_type)
 
 

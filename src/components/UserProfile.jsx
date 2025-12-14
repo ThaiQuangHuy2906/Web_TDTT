@@ -40,31 +40,33 @@ export default function UserProfile({ dark = false }) {
     };
 
     const buttonStyle = {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '6px 12px',
-        borderRadius: 8,
-        border: `1px solid ${dark ? '#404040' : '#d1d5db'}`,
-        background: dark ? '#1b1b1b' : '#f3f4f6',
-        color: dark ? '#e5e7eb' : '#111',
-        cursor: 'pointer',
-        fontSize: 14,
-        fontWeight: 500,
-        transition: 'all 0.2s ease',
-    };
-
-    const avatarStyle = {
-        width: 24,
-        height: 24,
+        width: 44,
+        height: 44,
         borderRadius: '50%',
-        background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+        border: `2px solid ${dark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(99, 102, 241, 0.2)'}`,
+        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        color: '#fff',
+        cursor: 'pointer',
+        fontSize: 16,
+        fontWeight: 600,
+        transition: 'all 0.2s ease',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 600,
+        boxShadow: dark
+            ? '0 4px 12px rgba(139, 92, 246, 0.4)'
+            : '0 4px 12px rgba(99, 102, 241, 0.3)',
+    };
+
+    const avatarStyle = {
+        width: '100%',
+        height: '100%',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 16,
+        fontWeight: 700,
     };
 
     const dropdownStyle = {
@@ -114,10 +116,6 @@ export default function UserProfile({ dark = false }) {
                 title={user.email}
             >
                 <div style={avatarStyle}>{avatarLetter}</div>
-                <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user.email}
-                </span>
-                <span style={{ fontSize: 10 }}>▼</span>
             </button>
 
             {showDropdown && (

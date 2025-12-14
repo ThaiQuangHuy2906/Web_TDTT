@@ -52,8 +52,9 @@ export default function App() {
     return localStorage.getItem('darkMode') === '1';
   });
   const [collapsed, setCollapsed] = useState(() => readQuery().collapsed === '1');
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [showTranslator, setShowTranslator] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   // AI features state
@@ -225,10 +226,16 @@ export default function App() {
 
   const onSelectPoi = async (poi) => {
     setSelectedPoiId(poi?.id ?? null);
-    setZoom(16);
 
     if (!poi) return;
+
+    // Zoom to selected POI
+    setCenter([poi.lat, poi.lon]);
+    setZoom(19);
+
+    console.log('🗺️ Fetching route from', origin, 'to', [poi.lat, poi.lon]);
     const routeData = await getRoute(origin, [poi.lat, poi.lon], 'driving');
+    console.log('🗺️ Route data:', routeData);
 
     if (routeData) {
       setRoute(routeData);
@@ -277,36 +284,64 @@ export default function App() {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords;
+        const { latitude, longitude, accuracy } = pos.coords;
         const pt = [latitude, longitude];
+
+        console.log('📍 GPS Location:', { latitude, longitude, accuracy });
 
         setOrigin(pt);
         setZoom(15);
         setSelectedPoiId(null);
 
-        setMessage("📍 Đã xác định vị trí hiện tại");
+        setMessage(`📍 Đã xác định vị trí (±${Math.round(accuracy)}m)`);
         setLoading(false);
       },
-      () => {
-        setMessage("❌ Không thể lấy vị trí (bạn có từ chối cấp quyền?)");
+      (error) => {
+        console.error('Geolocation error:', error);
+        let errorMsg = "❌ Không thể lấy vị trí";
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg = "❌ Bạn đã từ chối quyền truy cập vị trí";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg = "❌ Không thể xác định vị trí (GPS không khả dụng)";
+            break;
+          case error.TIMEOUT:
+            errorMsg = "❌ Hết thời gian chờ (hãy thử lại)";
+            break;
+        }
+
+        setMessage(errorMsg);
         setLoading(false);
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 30000,
         maximumAge: 0,
       }
     );
   }, []);
 
-  // Styles
+  // Styles - Modern UI
   const buttonStyle = {
-    padding: '6px 10px',
-    borderRadius: 8,
-    border: `1px solid ${dark ? '#404040' : '#d1d5db'}`,
-    background: dark ? '#1b1b1b' : '#f3f4f6',
-    color: dark ? '#e5e7eb' : '#111',
+    padding: '8px 14px',
+    borderRadius: 10,
+    border: 'none',
+    background: dark
+      ? 'linear-gradient(180deg, #334155 0%, #1e293b 100%)'
+      : 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
+    color: dark ? '#e2e8f0' : '#334155',
     cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 500,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    transition: 'all 0.2s ease',
+    boxShadow: dark
+      ? '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)'
+      : '0 1px 3px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8)',
   };
 
   // ============================================
@@ -353,78 +388,361 @@ export default function App() {
 
   return (
     <div
+      className={dark ? 'dark' : ''}
       style={{
         display: 'grid',
-        gridTemplateColumns: collapsed ? '1fr 12px' : '1fr 320px',
+        gridTemplateColumns: collapsed ? '1fr' : '1fr 360px',
         height: '100vh',
       }}
     >
       {/* Map Area */}
-      <div style={{ position: 'relative', background: dark ? '#0b0b0b' : '#fff' }}>
+      <div style={{ position: 'relative', background: dark ? '#0f172a' : '#f8fafc' }}>
+
+        {/* Top Bar - Compact with Menu */}
         <div
           style={{
             position: 'absolute',
-            top: 10,
-            left: 10,
-            zIndex: 1000,
-            backgroundColor: dark ? '#111' : '#fff',
-            color: dark ? '#e5e7eb' : '#111',
-            padding: '10px',
-            borderRadius: 8,
-            border: `1px solid ${dark ? '#2a2a2a' : '#e5e7eb'}`,
-            boxShadow: dark ? '0 2px 8px rgba(0,0,0,0.4)' : '0 2px 8px rgba(0,0,0,0.15)',
+            top: 16,
+            left: 16,
+            zIndex: 1001,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-            <SearchBar
-              onSearch={onSearch}
-              dark={dark}
-            />
-
-            <button style={buttonStyle} onClick={() => setShowFilters((v) => !v)}>
-              {showFilters ? `Ẩn bộ lọc (${filters.length})` : `Bộ lọc (${filters.length})`}
+          {/* Menu Button */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowMenu(v => !v)}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                border: 'none',
+                background: showMenu
+                  ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                  : dark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                color: showMenu ? '#fff' : dark ? '#f1f5f9' : '#1e293b',
+                fontSize: 20,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backdropFilter: 'blur(12px)',
+                boxShadow: dark
+                  ? '0 4px 15px rgba(0,0,0,0.3)'
+                  : '0 4px 15px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease',
+              }}
+              title="Menu"
+            >
+              ☰
             </button>
 
-            <button style={buttonStyle} onClick={resetMap}>
-              ↩️ Reset
-            </button>
+            {/* Dropdown Menu */}
+            {showMenu && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 52,
+                  left: 0,
+                  background: dark
+                    ? 'rgba(15, 23, 42, 0.98)'
+                    : 'rgba(255, 255, 255, 0.98)',
+                  backdropFilter: 'blur(16px)',
+                  borderRadius: 14,
+                  border: `1px solid ${dark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)'}`,
+                  boxShadow: dark
+                    ? '0 8px 32px rgba(0,0,0,0.5)'
+                    : '0 8px 32px rgba(0,0,0,0.15)',
+                  padding: 8,
+                  minWidth: 200,
+                  animation: 'fadeIn 0.2s ease',
+                }}
+              >
+                {/* Menu Items */}
+                <button
+                  onClick={() => { setShowFilters(v => !v); setShowMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: showFilters ? (dark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.background = dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(241, 245, 249, 1)'}
+                  onMouseLeave={e => e.target.style.background = showFilters ? (dark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent'}
+                >
+                  <span style={{ fontSize: 18 }}>🎯</span>
+                  Bộ lọc địa điểm {filters.length > 0 && <span style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: 10, fontSize: 12 }}>{filters.length}</span>}
+                </button>
 
-            <button style={buttonStyle} onClick={locateUser}>
-              📍 Vị trí của tôi
-            </button>
+                <button
+                  onClick={() => { locateUser(); setShowMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.background = dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(241, 245, 249, 1)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: 18 }}>📍</span>
+                  Vị trí của tôi
+                </button>
 
-            <button style={buttonStyle} onClick={copyShareLink}>
-              🔗 Copy link
-            </button>
+                <button
+                  onClick={() => { copyShareLink(); setShowMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.background = dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(241, 245, 249, 1)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: 18 }}>🔗</span>
+                  Chia sẻ link
+                </button>
 
-            <button style={buttonStyle} onClick={() => setShowTranslator(v => !v)}>
-              🌐 Dịch nhanh
-            </button>
+                <button
+                  onClick={() => { setShowTranslator(v => !v); setShowMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: showTranslator ? (dark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.background = dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(241, 245, 249, 1)'}
+                  onMouseLeave={e => e.target.style.background = showTranslator ? (dark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent'}
+                >
+                  <span style={{ fontSize: 18 }}>🌐</span>
+                  Dịch nhanh
+                </button>
 
-            <button style={buttonStyle} onClick={() => setDark((v) => !v)}>
-              {dark ? '☀️ Light' : '🌙 Dark'}
-            </button>
+                <button
+                  onClick={() => { resetMap(); setShowMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.background = dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(241, 245, 249, 1)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: 18 }}>↩️</span>
+                  Reset bản đồ
+                </button>
 
-            <button style={buttonStyle} onClick={() => setCollapsed((v) => !v)}>
-              {collapsed ? '» Mở' : '« Thu gọn'}
-            </button>
+                <div style={{ height: 1, background: dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 1)', margin: '8px 0' }} />
 
-            {/* User Profile Component */}
-            <UserProfile dark={dark} />
+                <button
+                  onClick={() => { setDark(v => !v); setShowMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.background = dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(241, 245, 249, 1)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: 18 }}>{dark ? '☀️' : '🌙'}</span>
+                  {dark ? 'Chế độ sáng' : 'Chế độ tối'}
+                </button>
+
+                <button
+                  onClick={() => { setCollapsed(v => !v); setShowMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.background = dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(241, 245, 249, 1)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: 18 }}>{collapsed ? '»' : '«'}</span>
+                  {collapsed ? 'Hiện danh sách POI' : 'Ẩn danh sách POI'}
+                </button>
+              </div>
+            )}
           </div>
 
-          {showFilters && <FilterBar selectedTypes={filters} onChange={setFilters} />}
-
-          <div style={{ fontSize: 12, marginTop: 6 }}>
-            {loading ? '⏳ Đang tải…' : message}
-          </div>
-
-          <TranslatorPopup
-            open={showTranslator}
+          {/* Compact Search Bar */}
+          <SearchBar
+            onSearch={onSearch}
             dark={dark}
-            onClose={() => setShowTranslator(false)}
           />
+
+          {/* User Profile */}
+          <UserProfile dark={dark} />
         </div>
+
+        {/* Filter Panel - Below Search (collapsible) */}
+        {showFilters && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 70,
+              left: 16,
+              zIndex: 1000,
+              width: 420,
+              maxWidth: collapsed ? 'calc(100vw - 100px)' : 'calc(100vw - 420px)',
+              background: dark
+                ? 'rgba(15, 23, 42, 0.95)'
+                : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(12px)',
+              padding: 16,
+              borderRadius: 14,
+              border: `1px solid ${dark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.8)'}`,
+              boxShadow: dark
+                ? '0 4px 20px rgba(0,0,0,0.4)'
+                : '0 4px 20px rgba(0,0,0,0.1)',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 8,
+            }}>
+              <span style={{
+                fontWeight: 600,
+                fontSize: 14,
+                color: dark ? '#f1f5f9' : '#1e293b',
+              }}>
+                🎯 Bộ lọc địa điểm
+              </span>
+              <button
+                onClick={() => setShowFilters(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: dark ? '#64748b' : '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: 18,
+                  padding: 4,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <FilterBar selectedTypes={filters} onChange={setFilters} dark={dark} />
+          </div>
+        )}
+
+        {/* Status Message - Bottom Left */}
+        <div style={{
+          position: 'absolute',
+          bottom: 30,
+          left: 16,
+          zIndex: 999,
+          fontSize: 13,
+          padding: '10px 16px',
+          borderRadius: 10,
+          background: loading
+            ? 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)'
+            : (dark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)'),
+          backdropFilter: 'blur(8px)',
+          border: `1px solid ${loading
+            ? 'transparent'
+            : (dark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 0.8)')}`,
+          color: loading ? '#fff' : (dark ? '#94a3b8' : '#64748b'),
+          boxShadow: loading
+            ? '0 4px 15px rgba(59, 130, 246, 0.4)'
+            : (dark ? '0 4px 15px rgba(0,0,0,0.3)' : '0 4px 15px rgba(0,0,0,0.08)'),
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          maxWidth: 350,
+        }}>
+          {loading && (
+            <span style={{
+              display: 'inline-block',
+              animation: 'pulse 1.5s ease-in-out infinite',
+            }}>⏳</span>
+          )}
+          {loading ? 'Đang tải…' : message}
+        </div>
+
+        <TranslatorPopup
+          open={showTranslator}
+          dark={dark}
+          onClose={() => setShowTranslator(false)}
+        />
 
         <MapView
           center={center}
@@ -440,19 +758,20 @@ export default function App() {
       </div>
 
       {/* Sidebar */}
-      <div
-        style={{
-          borderLeft: `1px solid ${dark ? '#333' : '#ddd'}`,
-          background: dark ? '#1e1e1e' : '#fff',
-          color: dark ? '#f1f1f1' : '#111',
-          padding: collapsed ? 0 : 10,
-          overflowY: 'auto',
-          width: collapsed ? 12 : 320,
-          transition: 'all .3s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden',
-        }}
-      >
-        {!collapsed && (
+      {!collapsed && (
+        <div
+          style={{
+            borderLeft: `1px solid ${dark ? '#334155' : '#e2e8f0'}`,
+            background: dark
+              ? 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)'
+              : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+            color: dark ? '#f1f5f9' : '#1e293b',
+            padding: 16,
+            overflowY: 'auto',
+            width: 360,
+            transition: 'all .3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
           <>
             <WeatherCard
               weather={weather}
@@ -461,7 +780,36 @@ export default function App() {
               dark={dark}
             />
 
-            <h3>📌 Điểm quan tâm gần đây</h3>
+            <h3 style={{
+              fontSize: 16,
+              fontWeight: 600,
+              marginBottom: 12,
+              marginTop: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              color: dark ? '#f1f5f9' : '#1e293b',
+            }}>
+              <span style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>📌</span>
+              Điểm quan tâm gần đây
+              {pois.length > 0 && (
+                <span style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  color: '#fff',
+                  fontSize: 12,
+                  padding: '2px 10px',
+                  borderRadius: 12,
+                  fontWeight: 600,
+                }}>
+                  {pois.length}
+                </span>
+              )}
+            </h3>
 
             <POIList
               pois={pois}
@@ -471,11 +819,11 @@ export default function App() {
               dark={dark}
             />
           </>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* AI Features - Only show when authenticated */}
-      {showChatbot && <AIChatbot dark={dark} origin={origin} />}
+      {showChatbot && <AIChatbot dark={dark} origin={origin} collapsed={collapsed} />}
 
       {showRecommendations && (
         <SmartRecommendations

@@ -1,22 +1,110 @@
-# React + Vite
+# 🗺️ OSM Vietnam - Bản đồ Việt Nam thông minh
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ứng dụng bản đồ Việt Nam sử dụng OpenStreetMap với các tính năng AI thông minh.
 
-Currently, two official plugins are available:
+![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)
+![Vite](https://img.shields.io/badge/Vite-7.2-646CFF?logo=vite)
+![Firebase](https://img.shields.io/badge/Firebase-Auth-FFCA28?logo=firebase)
+![Leaflet](https://img.shields.io/badge/Leaflet-Maps-199900?logo=leaflet)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Tính năng
 
-## React Compiler
+### 🗺️ Bản đồ
+- Hiển thị bản đồ OpenStreetMap với dark/light mode
+- Tìm kiếm địa điểm (Nominatim API)
+- Hiển thị tuyến đường (OSRM API)
+- Click để chọn vị trí, xem POI xung quanh
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 📍 POI (Điểm quan tâm)
+- Hiển thị nhà hàng, quán cà phê, khách sạn, bệnh viện, ATM...
+- Bộ lọc theo loại địa điểm
+- Khoảng cách và thời gian di chuyển
 
-## Expanding the ESLint configuration
+### 🤖 AI Features
+- **AI Chatbot**: Trợ lý du lịch thông minh
+- **Smart Recommendations**: Gợi ý địa điểm dựa trên sở thích
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 🌤️ Thời tiết
+- Hiển thị thời tiết hiện tại (OpenWeatherMap API)
 
+### 👤 Tài khoản
+- Đăng nhập/Đăng ký với Firebase Auth
+- Lưu lịch sử tìm kiếm trên Firestore
 
-## Use: npm run dev to host local
-## must: npm install
+## 🚀 Cài đặt
 
-because i removed node_modules to reduce the file size
+```bash
+# Clone repo
+git clone https://github.com/your-username/osm-vn.git
+cd osm-vn
+
+# Cài đặt dependencies
+npm install
+
+# Chạy development server
+npm run dev
+```
+
+## ⚙️ Cấu hình
+
+Tạo file `.env` với các biến môi trường:
+
+```env
+# Firebase
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+
+# OpenWeatherMap (optional)
+VITE_WEATHER_API_KEY=your_openweather_key
+
+# Backend AI (optional)
+VITE_BACKEND_URL=http://localhost:7860
+```
+
+## 📁 Cấu trúc dự án
+
+```
+src/
+├── api/           # API clients (Nominatim, OSRM, Overpass, Weather, Backend)
+├── components/    # React components
+│   ├── auth/      # Login, Signup, ForgotPassword
+│   ├── AIChatbot.jsx
+│   ├── MapView.jsx
+│   ├── POIList.jsx
+│   ├── SearchBar.jsx
+│   └── ...
+├── contexts/      # React contexts (AuthContext)
+├── firebase/      # Firebase config & Firestore
+├── hooks/         # Custom hooks
+└── utils/         # Utility functions
+```
+
+## 🔧 Scripts
+
+```bash
+npm run dev      # Development server
+npm run build    # Build for production
+npm run preview  # Preview production build
+npm run lint     # Run ESLint
+```
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19.1, Vite 7.2
+- **Maps**: Leaflet, React-Leaflet
+- **Auth**: Firebase Authentication
+- **Database**: Cloud Firestore
+- **APIs**: OpenStreetMap, OSRM, Nominatim, OpenWeatherMap
+- **Styling**: CSS-in-JS, Modern gradients
+
+## 📄 License
+
+MIT License
+
+---
+
+Made with ❤️ in Vietnam 🇻🇳

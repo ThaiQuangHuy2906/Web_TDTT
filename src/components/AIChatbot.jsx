@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { chatWithAI, checkBackendHealth } from '../api/backend';
 
-export default function AIChatbot({ dark = false, origin = null }) {
+export default function AIChatbot({ dark = false, origin = null, collapsed = false }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -11,13 +11,14 @@ export default function AIChatbot({ dark = false, origin = null }) {
 
   // Check backend health when opening
   useEffect(() => {
-    if (open && backendStatus === 'unknown') {
+    if (open) {
+      console.log('🔍 Checking backend health...');
       checkBackendHealth().then(isHealthy => {
+        console.log('🔌 Backend health check result:', isHealthy);
         setBackendStatus(isHealthy ? 'healthy' : 'offline');
-        console.log('🔌 Backend status:', isHealthy ? 'Online' : 'Offline');
-      }).catch(() => {
+      }).catch((err) => {
+        console.error('🔌 Backend health check error:', err);
         setBackendStatus('offline');
-        console.log('🔌 Backend status: Offline (check failed)');
       });
     }
   }, [open]);
@@ -68,21 +69,31 @@ export default function AIChatbot({ dark = false, origin = null }) {
         console.log('⚠️ Switched to offline mode (fallback response detected)');
       }
 
-      // Add AI response
+      // Add AI response - extract reply text only
+      let replyContent = 'Xin lỗi, không có phản hồi từ AI.';
+
+      if (response && typeof response === 'object' && response.reply) {
+        replyContent = String(response.reply);
+      } else if (typeof response === 'string') {
+        replyContent = response;
+      }
+
+      console.log('📝 Reply content:', replyContent);
+
       setMessages([
         ...newMessages,
-        { role: 'assistant', content: response.reply }
+        { role: 'assistant', content: replyContent }
       ]);
 
     } catch (error) {
       console.error('❌ Chat error:', error);
       setBackendStatus('offline');
-      
+
       setMessages([
         ...newMessages,
-        { 
-          role: 'assistant', 
-          content: '⚠️ Xin lỗi, có lỗi xảy ra. Hãy thử lại hoặc dùng tính năng tìm kiếm!' 
+        {
+          role: 'assistant',
+          content: '⚠️ Xin lỗi, có lỗi xảy ra. Hãy thử lại hoặc dùng tính năng tìm kiếm!'
         }
       ]);
     } finally {
@@ -109,8 +120,8 @@ export default function AIChatbot({ dark = false, origin = null }) {
         onClick={() => setOpen(true)}
         style={{
           position: 'fixed',
-          bottom: 20,
-          right: 20,
+          bottom: 100,
+          right: collapsed ? 20 : 380,
           zIndex: 9999,
           width: 56,
           height: 56,
@@ -121,7 +132,7 @@ export default function AIChatbot({ dark = false, origin = null }) {
           fontSize: 24,
           cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-          transition: 'transform 0.2s',
+          transition: 'all 0.3s ease',
         }}
         onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
         onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -137,8 +148,8 @@ export default function AIChatbot({ dark = false, origin = null }) {
     <div
       style={{
         position: 'fixed',
-        bottom: 20,
-        right: 20,
+        bottom: 100,
+        right: collapsed ? 20 : 380,
         zIndex: 9999,
         width: 360,
         height: 500,
@@ -166,29 +177,29 @@ export default function AIChatbot({ dark = false, origin = null }) {
           <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
             🤖 Trợ lý AI
             {backendStatus === 'offline' && (
-              <span style={{ 
-                fontSize: 10, 
-                background: 'rgba(239, 68, 68, 0.8)', 
-                padding: '2px 6px', 
-                borderRadius: 4 
+              <span style={{
+                fontSize: 10,
+                background: 'rgba(239, 68, 68, 0.8)',
+                padding: '2px 6px',
+                borderRadius: 4
               }}>
                 Offline
               </span>
             )}
             {backendStatus === 'healthy' && (
-              <span style={{ 
-                fontSize: 10, 
-                background: 'rgba(34, 197, 94, 0.8)', 
-                padding: '2px 6px', 
-                borderRadius: 4 
+              <span style={{
+                fontSize: 10,
+                background: 'rgba(34, 197, 94, 0.8)',
+                padding: '2px 6px',
+                borderRadius: 4
               }}>
                 Online
               </span>
             )}
           </div>
           <div style={{ fontSize: 12, opacity: 0.9 }}>
-            {backendStatus === 'offline' 
-              ? 'Chế độ cơ bản (không cần server)' 
+            {backendStatus === 'offline'
+              ? 'Chế độ cơ bản (không cần server)'
               : 'Tư vấn du lịch Việt Nam'}
           </div>
         </div>
@@ -222,29 +233,29 @@ export default function AIChatbot({ dark = false, origin = null }) {
         {messages.length === 0 && (
           <div style={{ textAlign: 'center', padding: 20 }}>
             <div style={{ fontSize: 24, marginBottom: 8 }}>👋</div>
-            <div style={{ 
+            <div style={{
               color: dark ? '#e5e7eb' : '#111',
-              marginBottom: 12 
+              marginBottom: 12
             }}>
-              {backendStatus === 'offline' 
-                ? 'Xin chào! Tôi có thể giúp bạn tìm địa điểm (chế độ cơ bản)' 
+              {backendStatus === 'offline'
+                ? 'Xin chào! Tôi có thể giúp bạn tìm địa điểm (chế độ cơ bản)'
                 : 'Xin chào! Tôi có thể giúp bạn tìm địa điểm ở Việt Nam'}
             </div>
-            
+
             {/* Example questions */}
-            <div style={{ 
-              fontSize: 13, 
+            <div style={{
+              fontSize: 13,
               opacity: 0.8,
               marginTop: 12,
               color: dark ? '#9ca3af' : '#6b7280',
             }}>
               Thử hỏi:
             </div>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
               gap: 6,
-              marginTop: 8 
+              marginTop: 8
             }}>
               {[
                 'Tìm quán cà phê gần đây',
@@ -318,17 +329,17 @@ export default function AIChatbot({ dark = false, origin = null }) {
             }}
           >
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <span style={{ 
+              <span style={{
                 animation: 'blink 1.4s infinite both',
-                fontSize: 12 
+                fontSize: 12
               }}>●</span>
-              <span style={{ 
+              <span style={{
                 animation: 'blink 1.4s infinite both 0.2s',
-                fontSize: 12 
+                fontSize: 12
               }}>●</span>
-              <span style={{ 
+              <span style={{
                 animation: 'blink 1.4s infinite both 0.4s',
-                fontSize: 12 
+                fontSize: 12
               }}>●</span>
             </div>
           </div>
@@ -350,8 +361,8 @@ export default function AIChatbot({ dark = false, origin = null }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder={backendStatus === 'offline' 
-            ? 'Hỏi tôi (chế độ cơ bản)...' 
+          placeholder={backendStatus === 'offline'
+            ? 'Hỏi tôi (chế độ cơ bản)...'
             : 'Hỏi tôi về địa điểm...'}
           disabled={loading}
           style={{

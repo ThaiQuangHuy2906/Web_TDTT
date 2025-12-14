@@ -149,12 +149,12 @@ def start_ngrok():
     """Start ngrok tunnel"""
     from pyngrok import ngrok
 
-    print("🔄 Đang reset ngrok...")
+    print("[NGROK] Resetting ngrok...")
     ngrok.kill() # Giết chết mọi tiến trình ngrok cũ trước khi chạy cái mới
 
     auth_token = os.getenv("NGROK_AUTH_TOKEN")
     if not auth_token:
-        print("⚠️  NGROK_AUTH_TOKEN not set. API will only be accessible locally.")
+        print("[WARN] NGROK_AUTH_TOKEN not set. API will only be accessible locally.")
         return None
     
     try:
@@ -163,12 +163,12 @@ def start_ngrok():
         
         # Start tunnel
         public_url = ngrok.connect(port, bind_tls=True)
-        print(f"✅ ngrok tunnel active at: {public_url}")
-        print(f"📋 Use this URL in your React app: {public_url}")
+        print(f"[OK] ngrok tunnel active at: {public_url}")
+        print(f"[INFO] Use this URL in your React app: {public_url}")
         
         return str(public_url)
     except Exception as e:
-        print(f"❌ ngrok error: {e}")
+        print(f"[ERROR] ngrok error: {e}")
         return None
 
 # ============================================
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     if public_url:
         with open("ngrok_url.txt", "w") as f:
             f.write(public_url)
-        print(f"💾 URL saved to ngrok_url.txt")
+        print(f"[SAVED] URL saved to ngrok_url.txt")
     
     # Start FastAPI server
     port = int(os.getenv("PORT", 7860))
