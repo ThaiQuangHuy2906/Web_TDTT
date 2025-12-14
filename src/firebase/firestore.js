@@ -158,7 +158,7 @@ export async function migrateLocalStorageHistory(userId) {
         try {
             localHistory = JSON.parse(raw);
             if (!Array.isArray(localHistory)) localHistory = [];
-        } catch (parseErr) {
+        } catch {
             console.warn('⚠️ Invalid localStorage history format');
             return;
         }

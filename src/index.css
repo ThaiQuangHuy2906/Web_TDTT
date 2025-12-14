@@ -231,8 +231,105 @@ button:focus-visible {
   border: 1px solid #334155;
 }
 
+/* Light mode popup styling */
+.leaflet-popup-content-wrapper {
+  border-radius: 14px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+}
+
+.leaflet-popup-close-button {
+  top: 8px !important;
+  right: 8px !important;
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 18px !important;
+  color: #64748b !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #1e293b !important;
+}
+
+.dark-popup .leaflet-popup-close-button:hover {
+  color: #f1f5f9 !important;
+}
+
 /* Selection styling */
 ::selection {
   background: var(--primary);
   color: white;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+
+  /* Hide sidebar on mobile by default */
+  .sidebar-mobile-hidden {
+    display: none !important;
+  }
+
+  /* Full width search bar */
+  .search-container {
+    width: calc(100vw - 80px) !important;
+  }
+
+  /* Smaller buttons on mobile */
+  button {
+    padding: 0.4em 0.8em;
+    font-size: 0.8rem;
+  }
+
+  /* Adjust AI chatbot position */
+  .ai-chatbot-container {
+    bottom: 80px !important;
+    right: 10px !important;
+    width: calc(100vw - 20px) !important;
+    max-width: 360px !important;
+  }
+
+  /* Smart recommendations at bottom */
+  .smart-recommendations {
+    bottom: 60px !important;
+    left: 10px !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  /* Filter panel full width */
+  .filter-panel {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 300px !important;
+  }
+}
+
+/* Large screens */
+@media (min-width: 1440px) {
+  .sidebar {
+    width: 400px !important;
+  }
+}
+
+/* Print styles */
+@media print {
+
+  .control-panel,
+  .sidebar,
+  .ai-chatbot-container,
+  .smart-recommendations {
+    display: none !important;
+  }
 }

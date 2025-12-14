@@ -1,6 +1,54 @@
 import React from 'react'
 
-export default function POIList({ pois = [], onClickItem, onHoverItem, selectedPoiId, dark }) {
+// Skeleton loading component
+function SkeletonCard({ dark }) {
+    const shimmerStyle = {
+        background: dark
+            ? 'linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%)'
+            : 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.5s infinite',
+        borderRadius: 8,
+    };
+
+    return (
+        <div style={{
+            borderRadius: 14,
+            padding: 14,
+            background: dark ? '#1e293b' : '#ffffff',
+            border: `1px solid ${dark ? '#334155' : '#e2e8f0'}`,
+            marginBottom: 10,
+        }}>
+            <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ ...shimmerStyle, width: 44, height: 44, borderRadius: 10 }} />
+                <div style={{ flex: 1 }}>
+                    <div style={{ ...shimmerStyle, height: 16, width: '70%', marginBottom: 8 }} />
+                    <div style={{ ...shimmerStyle, height: 12, width: '40%' }} />
+                </div>
+                <div style={{ ...shimmerStyle, width: 28, height: 28, borderRadius: '50%' }} />
+            </div>
+        </div>
+    );
+}
+
+export default function POIList({ pois = [], onClickItem, onHoverItem, selectedPoiId, dark, loading = false }) {
+    // Show skeleton when loading
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                    <SkeletonCard key={i} dark={dark} />
+                ))}
+                <style>{`
+                    @keyframes shimmer {
+                        0% { background-position: -200% 0; }
+                        100% { background-position: 200% 0; }
+                    }
+                `}</style>
+            </div>
+        );
+    }
+
     if (!pois.length) {
         return (
             <div style={{

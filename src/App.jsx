@@ -51,18 +51,34 @@ export default function App() {
     if (q.dark != null) return q.dark === '1';
     return localStorage.getItem('darkMode') === '1';
   });
-  const [collapsed, setCollapsed] = useState(() => readQuery().collapsed === '1');
+  const [collapsed, setCollapsed] = useState(() => {
+    // Auto collapse on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return true;
+    }
+    return readQuery().collapsed === '1';
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [showTranslator, setShowTranslator] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   // AI features state
-  const [showChatbot, setShowChatbot] = useState(true);
-  const [showRecommendations, setShowRecommendations] = useState(true);
+  const [showChatbot] = useState(true);
+  const [showRecommendations] = useState(true);
 
   const fetchAbortRef = useRef(null);
   const debouncedFilters = useDebounce(filters, 400);
+
+  // Handle window resize for responsive: auto-collapse on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      if (mobile && !collapsed) setCollapsed(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [collapsed]);
 
   // Initialize from URL
   useEffect(() => {
@@ -210,7 +226,7 @@ export default function App() {
         setLoading(false);
       }
     },
-    [filters, dark, collapsed]
+    []
   );
 
   const onMapClick = useCallback(
@@ -221,7 +237,7 @@ export default function App() {
       setZoom(15);
       setMessage('📍 Đang tìm POI quanh vị trí bạn vừa chọn…');
     },
-    [filters, dark, collapsed]
+    []
   );
 
   const onSelectPoi = async (poi) => {
@@ -323,26 +339,7 @@ export default function App() {
     );
   }, []);
 
-  // Styles - Modern UI
-  const buttonStyle = {
-    padding: '8px 14px',
-    borderRadius: 10,
-    border: 'none',
-    background: dark
-      ? 'linear-gradient(180deg, #334155 0%, #1e293b 100%)'
-      : 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
-    color: dark ? '#e2e8f0' : '#334155',
-    cursor: 'pointer',
-    fontSize: 13,
-    fontWeight: 500,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    transition: 'all 0.2s ease',
-    boxShadow: dark
-      ? '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)'
-      : '0 1px 3px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8)',
-  };
+  // Styles moved to inline where needed (remove unused variable)
 
   // ============================================
   // AUTH FLOW: Show loading or auth screens if not authenticated
@@ -817,6 +814,7 @@ export default function App() {
               onClickItem={onSelectPoi}
               onHoverItem={(id) => setHoveredPoiId(id)}
               dark={dark}
+              loading={loading}
             />
           </>
         </div>

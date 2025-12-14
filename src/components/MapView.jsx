@@ -76,25 +76,127 @@ export default function MapView({
 
       {/* Marker điểm đang chấm (origin) */}
       <Marker position={origin ?? center}>
-        <Popup className={popupClass}>📍 Điểm đang chấm</Popup>
+        <Popup className={popupClass}>
+          <div style={{
+            padding: 4,
+            minWidth: 150,
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontWeight: 600,
+              fontSize: 14,
+              marginBottom: 4,
+            }}>
+              <span style={{
+                fontSize: 18,
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+              }}>📍</span>
+              Vị trí của bạn
+            </div>
+            <div style={{
+              fontSize: 12,
+              opacity: 0.8,
+            }}>
+              {(origin ?? center)[0].toFixed(5)}, {(origin ?? center)[1].toFixed(5)}
+            </div>
+          </div>
+        </Popup>
       </Marker>
 
       {/* Marker POI */}
-      {pois.map(p => (
-        <Marker
-          key={p.id}
-          position={[p.lat, p.lon]}
-          icon={getPoiIcon(p.type, dark, p.id === selectedPoiId, p.id === hoveredPoiId)}
-        >
-          <Popup className={popupClass}>
-            <div style={{ fontWeight: 600 }}>{p.name || '(Không rõ tên)'}</div>
-            <div>Loại: {p.type || 'amenity'}</div>
-            {p.address && <div>Địa chỉ: {p.address}</div>}
-            <div>Khoảng cách: {p.distanceText}</div>
-            <div>Tọa độ: {p.lat.toFixed(5)}, {p.lon.toFixed(5)}</div>
-          </Popup>
-        </Marker>
-      ))}
+      {pois.map(p => {
+        const typeColors = {
+          restaurant: '#ef4444',
+          cafe: '#f97316',
+          hotel: '#8b5cf6',
+          hospital: '#10b981',
+          park: '#22c55e',
+          supermarket: '#f59e0b',
+          museum: '#a855f7',
+          bank: '#06b6d4',
+          default: '#3b82f6',
+        };
+        const typeColor = typeColors[p.type] || typeColors.default;
+
+        return (
+          <Marker
+            key={p.id}
+            position={[p.lat, p.lon]}
+            icon={getPoiIcon(p.type, dark, p.id === selectedPoiId, p.id === hoveredPoiId)}
+          >
+            <Popup className={popupClass}>
+              <div style={{ minWidth: 200, padding: 4 }}>
+                {/* Header with gradient */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  marginBottom: 10,
+                }}>
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: `linear-gradient(135deg, ${typeColor} 0%, ${typeColor}cc 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                    boxShadow: `0 2px 8px ${typeColor}40`,
+                    flexShrink: 0,
+                  }}>
+                    {p.type === 'restaurant' ? '🍽️' :
+                      p.type === 'cafe' ? '☕' :
+                        p.type === 'hotel' ? '🏨' :
+                          p.type === 'hospital' ? '🏥' :
+                            p.type === 'park' ? '🌳' :
+                              p.type === 'supermarket' ? '🛒' :
+                                p.type === 'museum' ? '🏛️' :
+                                  p.type === 'bank' ? '🏦' : '📍'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      lineHeight: 1.3,
+                      marginBottom: 4,
+                    }}>
+                      {p.name || '(Không rõ tên)'}
+                    </div>
+                    <div style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 12,
+                      background: `${typeColor}20`,
+                      color: typeColor,
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}>
+                      {p.type || 'amenity'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info rows */}
+                <div style={{ fontSize: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {p.address && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                      <span style={{ opacity: 0.6 }}>📍</span>
+                      <span style={{ opacity: 0.9 }}>{p.address}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ opacity: 0.6 }}>📏</span>
+                    <span style={{ fontWeight: 600, color: typeColor }}>{p.distanceText}</span>
+                  </div>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {/* Đường nối từ origin → POI đã chọn */}
       {selectedPoi && (

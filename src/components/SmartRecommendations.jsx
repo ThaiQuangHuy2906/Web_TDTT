@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getPOIRecommendations } from '../api/backend';
 
 // Get color and icon for recommendation type
@@ -29,7 +29,7 @@ export default function SmartRecommendations({
   const [error, setError] = useState(false);
 
   // Extract user history from recent POIs
-  const getUserHistory = () => {
+  const getUserHistory = useCallback(() => {
     if (!pois || pois.length === 0) return [];
 
     // Get types from recent POIs
@@ -37,10 +37,10 @@ export default function SmartRecommendations({
 
     // Return unique types (max 10 most recent)
     return [...new Set(types)].slice(0, 10);
-  };
+  }, [pois]);
 
   // Load recommendations
-  const loadRecommendations = async () => {
+  const loadRecommendations = useCallback(async () => {
     if (!origin) {
       setRecommendations([]);
       setError(false);
@@ -74,7 +74,7 @@ export default function SmartRecommendations({
     } finally {
       setLoading(false);
     }
-  };
+  }, [origin, getUserHistory]);
 
   // Load on mount and when POIs change (but debounced)
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function SmartRecommendations({
     } else {
       setRecommendations([]);
     }
-  }, [pois.length, origin]);
+  }, [origin, loadRecommendations]);
 
   // Don't show if no recommendations and not loading
   if (!loading && recommendations.length === 0 && !error && !expanded) {
