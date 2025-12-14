@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { chatWithAI, checkBackendHealth } from '../api/backend';
 
 export default function AIChatbot({ dark = false, origin = null, collapsed = false }) {
@@ -8,6 +8,7 @@ export default function AIChatbot({ dark = false, origin = null, collapsed = fal
   const [loading, setLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState('unknown'); // 'healthy' | 'offline' | 'unknown'
   const messagesEndRef = useRef(null);
+  const abortRef = useRef(null);
 
   // Check backend health when opening
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function AIChatbot({ dark = false, origin = null, collapsed = fal
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
@@ -43,6 +44,12 @@ export default function AIChatbot({ dark = false, origin = null, collapsed = fal
 
     setLoading(true);
 
+    // Abort any in-flight request
+    if (abortRef.current) {
+      try { abortRef.current.abort(); } catch { /* ignore abort error */ }
+    }
+    abortRef.current = new AbortController();
+
     try {
       // Prepare location context
       const location = origin ? {
@@ -56,8 +63,9 @@ export default function AIChatbot({ dark = false, origin = null, collapsed = fal
       // Call AI API (with fallback built-in)
       const response = await chatWithAI(
         userMessage,
-        newMessages.slice(-4), // Last 4 messages for context
-        location
+        newMessages.slice(-6), // Last 6 messages for context
+        location,
+        { signal: abortRef.current.signal, timeout: 15000 }
       );
 
       console.log('📥 AI Response:', response);
@@ -88,18 +96,19 @@ export default function AIChatbot({ dark = false, origin = null, collapsed = fal
     } catch (error) {
       console.error('❌ Chat error:', error);
       setBackendStatus('offline');
-
-      setMessages([
-        ...newMessages,
-        {
-          role: 'assistant',
-          content: '⚠️ Xin lỗi, có lỗi xảy ra. Hãy thử lại hoặc dùng tính năng tìm kiếm!'
-        }
-      ]);
+      if (error?.name !== 'AbortError') {
+        setMessages([
+          ...newMessages,
+          {
+            role: 'assistant',
+            content: '⚠️ Xin lỗi, có lỗi xảy ra. Hãy thử lại hoặc dùng tính năng tìm kiếm!'
+          }
+        ]);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [input, loading, origin, messages, backendStatus]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {

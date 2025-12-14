@@ -106,7 +106,8 @@ checkHealth();
 /**
  * Chat with AI assistant
  */
-export async function chatWithAI(message, history = [], location = null) {
+export async function chatWithAI(message, history = [], location = null, options = {}) {
+    const { signal, timeout } = options || {};
     // Quick check if backend known to be down
     if (backendAvailable === false) {
         console.log('💬 Using fallback response (backend offline)');
@@ -116,11 +117,11 @@ export async function chatWithAI(message, history = [], location = null) {
     try {
         console.log('📤 Sending chat request to backend...');
 
-        const response = await backendClient.post('/chat', {
-            message,
-            history,
-            location,
-        });
+        const response = await backendClient.post(
+            '/chat',
+            { message, history, location },
+            { signal, timeout }
+        );
 
         backendAvailable = true;
         console.log('✅ Chat response received from backend');
